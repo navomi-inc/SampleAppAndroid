@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.helloworld">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- Vibrate on new incoming msg -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!--Required for Audio Messaging-->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!--Required for Audio Messaging and Image Sharing-->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <application
+        android:name=".MainApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name=".IntroActivity"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".MessagingActivity"
+            android:launchMode="singleTop"
+            android:label="@string/messaging_title">
+        </activity>
+        <activity
+            android:name=".MonitoringActivity"
+            android:label="@string/monitoring_title"/>
+        <activity
+            android:name=".FragmentContainerActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+        <activity android:name=".DeepLinkActivity"
+            tools:ignore="AppLinkUrlError">
+            <!-- Error ignored because our sample app doesn't need to be indexed by Google for any reason. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:host="liveperson.com"
+                    android:pathPrefix="/deeplink"
+                    android:scheme="http" />
+            </intent-filter>
+        </activity>
+
+        <!-- FCM -->
+        <!-- This service is used to receive any incoming message -->
+        <service android:name=".push.fcm.MyFirebaseMessagingService">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- This service is used to receive and register the token when it is refreshed -->
+        <service android:name=".push.fcm.MyFirebaseInstanceIDService">
+            <intent-filter>
+                <action android:name="com.google.firebase.INSTANCE_ID_EVENT" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".push.fcm.FirebaseRegistrationIntentService"
+            android:exported="false" />
+
+        <receiver android:name=".notification.NotificationUI$BadgeBroadcastReceiver">
+            <intent-filter>
+                <action android:name="ACTION_LP_UPDATE_NUM_UNREAD_MESSAGES_ACTION" />
+            </intent-filter>
+        </receiver>
+        <!-- End of FCM -->
+    </application>
+
+</manifest>
