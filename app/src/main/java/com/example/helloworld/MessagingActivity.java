@@ -23,27 +23,49 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.liveperson.infra.BadArgumentException;
 import com.liveperson.infra.CampaignInfo;
 import com.liveperson.infra.ConversationViewParams;
 import com.liveperson.infra.ICallback;
 import com.liveperson.infra.InitLivePersonProperties;
 import com.liveperson.infra.LPConversationsHistoryStateToDisplay;
+import com.liveperson.infra.MonitoringInitParams;
 import com.liveperson.infra.auth.LPAuthenticationParams;
 import com.liveperson.infra.auth.LPAuthenticationType;
 import com.liveperson.infra.callbacks.InitLivePersonCallBack;
 import com.liveperson.infra.model.LPWelcomeMessage;
 import com.liveperson.infra.model.MessageOption;
+import com.liveperson.messaging.controller.ClientProperties;
 import com.liveperson.messaging.sdk.api.LivePerson;
 import com.liveperson.messaging.sdk.api.model.ConsumerProfile;
 import com.example.helloworld.notification.NotificationUI;
 import com.example.helloworld.utils.SampleAppStorage;
 import com.example.helloworld.utils.SampleAppUtils;
+import com.liveperson.monitoring.MonitoringFactory;
+import com.liveperson.infra.messaging_ui.MessagingUIFactory;
+import com.liveperson.messaging.MessagingFactory;
+
+import com.liveperson.monitoring.model.EngagementDetails;
+import com.liveperson.monitoring.model.LPMonitoringIdentity;
+import com.liveperson.monitoring.sdk.MonitoringParams;
+import com.liveperson.monitoring.sdk.api.LivepersonMonitoring;
+import com.liveperson.monitoring.sdk.callbacks.EngagementCallback;
+import com.liveperson.monitoring.sdk.callbacks.MonitoringErrorType;
+import com.liveperson.monitoring.sdk.callbacks.SdeCallback;
+import com.liveperson.monitoring.sdk.responses.LPEngagementResponse;
+import com.liveperson.monitoring.sdk.responses.LPSdeResponse;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 
 /**
@@ -60,6 +82,12 @@ public class MessagingActivity extends AppCompatActivity {
 	public static final String SESSION_ID_KEY = "sessionId";
 	public static final String VISITOR_ID_KEY = "visitorId";
 	public static final String ENGAGEMENT_CONTEXT_ID_KEY = "engagementContextId";
+
+	private String currentCampaignId;
+	private String currentEngagementId;
+	private String currentSessionId;
+	private String currentVisitorId;
+	private String currentEngagementContextId;
 
 	private Spinner authTypeSpinner;
 	private EditText mFirstNameView;
@@ -88,7 +116,10 @@ public class MessagingActivity extends AppCompatActivity {
 		initOpenConversationButton();
 		initStartFragmentButton();
 
-		handlePush(getIntent());
+//		handlePush(getIntent());
+
+		//MonitoringFactory.INSTANCE.getMonitoring().getApplicationContext()
+
 	}
 
 	@Override
@@ -277,7 +308,9 @@ public class MessagingActivity extends AppCompatActivity {
 	 */
 	private void initActivityConversation() {
 
-		LivePerson.initialize(MessagingActivity.this, new InitLivePersonProperties(SampleAppStorage.getInstance(MessagingActivity.this).getAccount(), SampleAppStorage.SDK_SAMPLE_FCM_APP_ID, new InitLivePersonCallBack() {
+		MonitoringInitParams monitoringInitParams =  new MonitoringInitParams("1bf3b045-2bce-4c2f-a51b-2aab6142e526");
+
+		LivePerson.initialize(MessagingActivity.this, new InitLivePersonProperties(SampleAppStorage.getInstance(MessagingActivity.this).getAccount(), SampleAppStorage.SDK_SAMPLE_FCM_APP_ID, monitoringInitParams, new InitLivePersonCallBack() {
 			@Override
 			public void onInitSucceed() {
 				Log.i(TAG, "SDK initialize completed with Activity mode");
@@ -285,12 +318,92 @@ public class MessagingActivity extends AppCompatActivity {
 				// in main application class.
 				//setCallBack();
 				MainApplication.getInstance().setShowToastOnCallback(mCallbackToastCheckBox.isChecked());
+
 				// you can't register pusher before initialization
-				SampleAppUtils.handleGCMRegistration(MessagingActivity.this);
-				runOnUiThread(() -> {
-					openActivity();
-					SampleAppUtils.enableButtonAndChangeText(mOpenConversationButton, getString(R.string.open_activity));
+//				SampleAppUtils.handleGCMRegistration(MessagingActivity.this);
+
+//				LPMonitoringIdentity identity = new LPMonitoringIdentity("6593b8cf-01ef-49da-93b8-cf01ef19daa8","LivePerson");
+				LPMonitoringIdentity identity = new LPMonitoringIdentity("","");
+
+				ArrayList identities = new ArrayList();
+				identities.add(identity);
+
+				JSONArray entryPoints = new JSONArray();
+				JSONArray engagementAttributes = new JSONArray();
+
+				try {
+					JSONObject engagement = new JSONObject();
+
+					engagement.put("type", "ctmrinfo");
+
+					JSONObject engagementStatus = new JSONObject();
+
+					engagementStatus.put("customerId", "16161616");
+
+					engagement.put("info", engagementStatus);
+
+					engagementAttributes.put(engagement);
+
+				} catch (Exception e) {
+					Log.e(TAG, e.getMessage());
+				}
+
+				MonitoringParams monitoringParms = new MonitoringParams("", entryPoints, engagementAttributes);
+
+// 				LivepersonMonitoring.sendSde(MessagingActivity.this, identities, monitoringParms, new SdeCallback() {
+//					@Override
+//					public void onSuccess(@NotNull LPSdeResponse lpSdeResponse) {
+//						Log.d(TAG, lpSdeResponse.toString());
+//					}
+//
+//					@Override
+//					public void onError(@NotNull MonitoringErrorType monitoringErrorType, @org.jetbrains.annotations.Nullable Exception e) {
+//						Log.e(TAG, monitoringErrorType.toString());
+//					}
+//				});
+
+				Log.i(TAG, " Before LivepersonMonitoring.getEngagement");
+				LivepersonMonitoring.getEngagement(MessagingActivity.this, identities, monitoringParms, new EngagementCallback() {
+
+					@Override
+					public void onSuccess(@NotNull LPEngagementResponse lpEngagementResponse) {
+
+						Log.i(TAG, "Engagement onSuccess");
+						List<EngagementDetails> engagementList = lpEngagementResponse.getEngagementDetailsList();
+
+
+						if (engagementList != null && !engagementList.isEmpty()) {
+
+							EngagementDetails engagementDetails = engagementList.get(0);
+
+							Log.i(TAG, "-------------------------------------------------");
+							Log.i(TAG, engagementDetails.getCampaignId());
+							Log.i(TAG, engagementDetails.getConnectorId());
+							Log.i(TAG, engagementDetails.getContextId());
+							Log.i(TAG, engagementDetails.getConversationId());
+							Log.i(TAG, engagementDetails.getEngagementId());
+							Log.i(TAG, engagementDetails.getStatus());
+							Log.i(TAG, "-------------------------------------------------");
+
+							currentCampaignId = engagementDetails.getCampaignId();
+							currentEngagementId = engagementDetails.getEngagementId();
+							currentEngagementContextId = engagementDetails.getContextId();
+							currentSessionId = lpEngagementResponse.getSessionId();
+							currentVisitorId = lpEngagementResponse.getVisitorId();
+						}
+
+						runOnUiThread(() -> {
+							openActivity();
+							SampleAppUtils.enableButtonAndChangeText(mOpenConversationButton, getString(R.string.open_activity));
+						});
+					}
+
+					@Override
+					public void onError(@NotNull MonitoringErrorType monitoringErrorType, @org.jetbrains.annotations.Nullable Exception e) {
+						Log.d(TAG, monitoringErrorType.toString());
+					}
 				});
+
 			}
 
 			@Override
@@ -302,6 +415,7 @@ public class MessagingActivity extends AppCompatActivity {
 			}
 		}));
 	}
+
 
 	/**
 	 * Start {@link FragmentContainerActivity} that handles the SDK the Messaging SDK and start the SDK in "Fragment Mode"
@@ -319,21 +433,34 @@ public class MessagingActivity extends AppCompatActivity {
 	/**
 	 * Calling to "showConversation" API
 	 */
-	private void openActivity() {
+	private void openActivity()  {
 
-		storeData();
+//		storeData();
 
-		if (isFromPush) {
-			LivePerson.setPushNotificationTapped();
-			isFromPush = false;
+//		if (isFromPush) {
+//			LivePerson.setPushNotificationTapped();
+//			isFromPush = false;
+//		}
+
+		CampaignInfo campaignInfo = null;
+
+		try {
+			if (currentCampaignId != null && currentCampaignId.length() > 0 &&
+					currentEngagementId != null && currentEngagementId.length() > 0)
+			campaignInfo = new CampaignInfo(Long.valueOf(currentCampaignId), Long.valueOf(currentEngagementId),
+					currentEngagementContextId, currentVisitorId, currentVisitorId);
+		} catch (BadArgumentException e) {
+//			Log.e(TAG, e.getMessage());
 		}
 
-		CampaignInfo campaignInfo = SampleAppUtils.getCampaignInfo(this);
+
 		ConversationViewParams params = new ConversationViewParams(isReadOnly())
 				.setHistoryConversationsStateToDisplay(LPConversationsHistoryStateToDisplay.ALL)
 				.setCampaignInfo(campaignInfo)
 				.setReadOnlyMode(isReadOnly());
+
 //        setWelcomeMessage(params);  //This method sets the welcome message with quick replies. Uncomment this line to enable this feature.
+
 		LivePerson.showConversation(MessagingActivity.this, getLPAuthenticationParams(), params);
 
 		ConsumerProfile consumerProfile = new ConsumerProfile.Builder()
@@ -344,10 +471,10 @@ public class MessagingActivity extends AppCompatActivity {
 		LivePerson.setUserProfile(consumerProfile);
 
 		//Constructing the notification builder for the upload/download foreground service and passing it to the SDK.
-		Notification.Builder uploadBuilder = NotificationUI.createUploadNotificationBuilder(getApplicationContext());
-		Notification.Builder downloadBuilder = NotificationUI.createDownloadNotificationBuilder(getApplicationContext());
-		LivePerson.setImageServiceUploadNotificationBuilder(uploadBuilder);
-		LivePerson.setImageServiceDownloadNotificationBuilder(downloadBuilder);
+//		Notification.Builder uploadBuilder = NotificationUI.createUploadNotificationBuilder(getApplicationContext());
+//		Notification.Builder downloadBuilder = NotificationUI.createDownloadNotificationBuilder(getApplicationContext());
+//		LivePerson.setImageServiceUploadNotificationBuilder(uploadBuilder);
+//		LivePerson.setImageServiceDownloadNotificationBuilder(downloadBuilder);
 	}
 
 	@SuppressWarnings("unused")
@@ -511,6 +638,7 @@ public class MessagingActivity extends AppCompatActivity {
 				authType = LPAuthenticationType.SIGN_UP;
 				break;
 		}
+
 		return authType;
 	}
 

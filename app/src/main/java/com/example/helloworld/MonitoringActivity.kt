@@ -15,8 +15,8 @@ import com.liveperson.monitoring.sdk.callbacks.MonitoringErrorType
 import com.liveperson.monitoring.sdk.callbacks.SdeCallback
 import com.liveperson.monitoring.sdk.responses.LPEngagementResponse
 import com.liveperson.monitoring.sdk.responses.LPSdeResponse
-import com.liveperson.sample.app.utils.SampleAppStorage
-import kotlinx.android.synthetic.main.activity_monitoring.*
+import com.example.helloworld.utils.SampleAppStorage
+//import kotlinx.android.synthetic.main.activity_monitoring.*
 import org.json.JSONArray
 import org.json.JSONException
 
@@ -219,12 +219,15 @@ class MonitoringActivity : AppCompatActivity() {
             entryPoints = JSONArray(entryPoinstsEditText?.text.toString())
         }
 
-        if (!TextUtils.isEmpty(engagement_attributes_edit_text.text.toString())) {
+//        if (!TextUtils.isEmpty(engagement_attributes_edit_text.text.toString())) {
+//
+//            engagementAttributes = JSONArray(engagementAttributesEditText?.text.toString())
+//        }
 
-            engagementAttributes = JSONArray(engagementAttributesEditText?.text.toString())
-        }
+        val page_id_edit_text = "";
 
-        val pageId : String? = if (withPageId)  page_id_edit_text.text.toString() else null
+        val pageId : String? = if (withPageId)  page_id_edit_text.toString() else null
+
         return MonitoringParams(pageId, entryPoints, engagementAttributes)
     }
 }
